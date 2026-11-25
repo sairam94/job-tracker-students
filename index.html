@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rolebook — Job Application Tracker</title>
+    <meta
+      name="description"
+      content="Single-page job application tracker with pipeline dashboard, status bar chart, search, and localStorage persistence."
+    />
+    <meta property="og:title" content="Rolebook — Job Application Tracker" />
+    <meta
+      property="og:description"
+      content="Single-page job application tracker with pipeline dashboard, status bar chart, search, and localStorage persistence."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a href="#overview" class="brand-wordmark">Rolebook</a>
+
+        <nav class="topbar-nav" aria-label="Primary navigation">
+          <a href="#overview" class="nav-link">Overview</a>
+          <a href="#pipeline" class="nav-link">Pipeline</a>
+          <a href="#applications" class="nav-link">Applications</a>
+        </nav>
+
+        <div class="topbar-actions">
+          <button type="button" id="open-add-btn" class="btn btn-primary">
+            Add application
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <!-- Section 1: Overview & Pipeline Dashboard -->
+      <section id="overview" class="section" aria-labelledby="overview-heading">
+        <div class="section-header">
+          <div>
+            <h1 id="overview-heading" class="page-title">Application pipeline</h1>
+            <p id="overview-subtitle" class="page-subtitle">
+              Track every role, interview stage, and follow-up note in one place.
+            </p>
+          </div>
+        </div>
+
+        <!-- Unified Status Metric Strip -->
+        <div class="kpi-strip" role="region" aria-label="Application counts by status">
+          <button
+            type="button"
+            class="kpi-cell is-active"
+            data-status-filter="All"
+            aria-pressed="true"
+          >
+            <span class="kpi-label">Total</span>
+            <span class="kpi-value" id="count-total">0</span>
+            <span class="kpi-meta" id="meta-total">All tracked roles</span>
+          </button>
+
+          <button
+            type="button"
+            class="kpi-cell"
+            data-status-filter="Applied"
+            data-status-tone="applied"
+            aria-pressed="false"
+          >
+            <span class="kpi-label">Applied</span>
+            <span class="kpi-value" id="count-applied">0</span>
+            <span class="kpi-meta" id="pct-applied">0% of total</span>
+          </button>
+
+          <button
+            type="button"
+            class="kpi-cell"
+            data-status-filter="Interviewing"
+            data-status-tone="interviewing"
+            aria-pressed="false"
+          >
+            <span class="kpi-label">Interviewing</span>
+            <span class="kpi-value" id="count-interviewing">0</span>
+            <span class="kpi-meta" id="pct-interviewing">0% of total</span>
+          </button>
+
+          <button
+            type="button"
+            class="kpi-cell"
+            data-status-filter="Offer"
+            data-status-tone="offer"
+            aria-pressed="false"
+          >
+            <span class="kpi-label">Offer</span>
+            <span class="kpi-value" id="count-offer">0</span>
+            <span class="kpi-meta" id="pct-offer">0% of total</span>
+          </button>
+
+          <button
+            type="button"
+            class="kpi-cell"
+            data-status-filter="Rejected"
+            data-status-tone="rejected"
+            aria-pressed="false"
+          >
+            <span class="kpi-label">Rejected</span>
+            <span class="kpi-value" id="count-rejected">0</span>
+            <span class="kpi-meta" id="pct-rejected">0% of total</span>
+          </button>
+        </div>
+
+        <!-- Bar Chart + Factual Pipeline Summary -->
+        <div id="pipeline" class="dashboard-grid">
+          <div class="surface chart-panel">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Applications by status</h2>
+                <p class="panel-caption">Click any bar to filter the directory below</p>
+              </div>
+              <button
+                type="button"
+                id="chart-reset-filter"
+                class="text-action"
+                hidden
+              >
+                Show all
+              </button>
+            </div>
+
+            <div class="chart-stage" id="chart-stage">
+              <svg
+                id="status-bar-chart"
+                class="bar-chart-svg"
+                viewBox="0 0 640 248"
+                role="img"
+                aria-label="Bar chart showing application counts for Applied, Interviewing, Offer, and Rejected statuses"
+              ></svg>
+              <div id="chart-tooltip" class="chart-tooltip" role="tooltip" hidden></div>
+            </div>
+          </div>
+
+          <aside class="surface summary-panel" aria-label="Pipeline conversion summary">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Pipeline summary</h2>
+                <p class="panel-caption">Calculated from your saved applications</p>
+              </div>
+            </div>
+
+            <dl class="summary-list">
+              <div class="summary-row">
+                <dt>Active pipeline</dt>
+                <dd class="mono-num" id="metric-active">0</dd>
+              </div>
+              <div class="summary-row">
+                <dt>Interview rate</dt>
+                <dd class="mono-num" id="metric-interview-rate">0%</dd>
+              </div>
+              <div class="summary-row">
+                <dt>Offer rate</dt>
+                <dd class="mono-num" id="metric-offer-rate">0%</dd>
+              </div>
+              <div class="summary-row">
+                <dt>Most recent</dt>
+                <dd id="metric-latest" class="summary-text-value">—</dd>
+              </div>
+            </dl>
+          </aside>
+        </div>
+      </section>
+
+      <!-- Section 2: Applications Directory -->
+      <section id="applications" class="section" aria-labelledby="applications-heading">
+        <div class="section-header section-header-row">
+          <div>
+            <h2 id="applications-heading" class="section-title">Applications</h2>
+            <p id="results-summary" class="section-caption">0 applications</p>
+          </div>
+
+          <div class="section-actions">
+            <button type="button" id="export-csv-btn" class="btn btn-secondary">
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Search, Status Filter Tabs, and Sort -->
+        <div class="toolbar">
+          <div class="search-field">
+            <svg
+              class="search-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <label for="search-input" class="sr-only">Search applications</label>
+            <input
+              type="search"
+              id="search-input"
+              class="search-input"
+              placeholder="Search company, role, location, or notes..."
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              id="clear-search-btn"
+              class="search-clear"
+              aria-label="Clear search"
+              hidden
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="toolbar-controls">
+            <div class="segmented-control" role="group" aria-label="Filter by status">
+              <button type="button" class="segment-btn is-active" data-filter="All">All</button>
+              <button type="button" class="segment-btn" data-filter="Applied">Applied</button>
+              <button type="button" class="segment-btn" data-filter="Interviewing">Interviewing</button>
+              <button type="button" class="segment-btn" data-filter="Offer">Offer</button>
+              <button type="button" class="segment-btn" data-filter="Rejected">Rejected</button>
+            </div>
+
+            <div class="sort-wrap">
+              <label for="sort-select" class="sr-only">Sort applications</label>
+              <select id="sort-select" class="sort-select">
+                <option value="date-desc">Newest applied</option>
+                <option value="date-asc">Oldest applied</option>
+                <option value="company-asc">Company A–Z</option>
+                <option value="status">Status stage</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Applications Table / List Surface -->
+        <div class="surface table-surface">
+          <div class="table-wrap" id="table-wrap">
+            <table class="applications-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="col-company">Company</th>
+                  <th scope="col" class="col-role">Role</th>
+                  <th scope="col" class="col-location">Location</th>
+                  <th scope="col" class="col-date">Date applied</th>
+                  <th scope="col" class="col-status">Status</th>
+                  <th scope="col" class="col-notes">Notes</th>
+                  <th scope="col" class="col-actions"><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="applications-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Empty State (no applications at all) -->
+          <div id="empty-state" class="empty-state" hidden>
+            <h3 class="empty-title">No job applications tracked yet</h3>
+            <p class="empty-description">
+              Log your first application to track interview progress, notes, and pipeline counts.
+              Everything stays saved locally in your browser.
+            </p>
+            <div class="empty-actions">
+              <button type="button" id="empty-add-btn" class="btn btn-primary">
+                Add first application
+              </button>
+              <button type="button" id="load-sample-btn" class="btn btn-secondary">
+                Load sample data
+              </button>
+            </div>
+          </div>
+
+          <!-- No Search/Filter Matches State -->
+          <div id="no-matches-state" class="empty-state" hidden>
+            <h3 class="empty-title" id="no-matches-title">No matching applications</h3>
+            <p class="empty-description" id="no-matches-description">
+              Try adjusting your search query or switching back to all statuses.
+            </p>
+            <div class="empty-actions">
+              <button type="button" id="reset-filters-btn" class="btn btn-secondary">
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <p class="footer-copy">Rolebook · Saved locally in this browser</p>
+      </div>
+    </footer>
+
+    <!-- Add / Edit Application Modal -->
+    <div
+      id="application-modal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      hidden
+    >
+      <div class="modal-panel">
+        <div class="modal-header">
+          <h2 id="modal-title" class="modal-title">Add application</h2>
+          <button
+            type="button"
+            id="modal-close-btn"
+            class="icon-btn"
+            aria-label="Close dialog"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="application-form" class="modal-form" novalidate>
+          <input type="hidden" id="field-id" name="id" />
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="field-company" class="field-label">
+                Company <span class="required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                id="field-company"
+                name="company"
+                class="field-input"
+                placeholder="e.g. Stripe"
+                required
+                maxlength="120"
+              />
+              <p class="field-error" id="error-company" role="alert"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="field-role" class="field-label">
+                Role <span class="required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                id="field-role"
+                name="role"
+                class="field-input"
+                placeholder="e.g. Senior Frontend Engineer"
+                required
+                maxlength="140"
+              />
+              <p class="field-error" id="error-role" role="alert"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="field-location" class="field-label">Location</label>
+              <input
+                type="text"
+                id="field-location"
+                name="location"
+                class="field-input"
+                placeholder="e.g. Remote, US or New York, NY"
+                maxlength="120"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="field-date" class="field-label">
+                Date applied <span class="required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="date"
+                id="field-date"
+                name="dateApplied"
+                class="field-input mono-input"
+                required
+              />
+              <p class="field-error" id="error-date" role="alert"></p>
+            </div>
+
+            <div class="form-field">
+              <label for="field-status" class="field-label">Status</label>
+              <select id="field-status" name="status" class="field-input">
+                <option value="Applied">Applied</option>
+                <option value="Interviewing">Interviewing</option>
+                <option value="Offer">Offer</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="field-link" class="field-label">Job link</label>
+              <input
+                type="url"
+                id="field-link"
+                name="jobLink"
+                class="field-input"
+                placeholder="https://company.com/careers/role"
+                maxlength="500"
+              />
+              <p class="field-error" id="error-link" role="alert"></p>
+            </div>
+          </div>
+
+          <div class="form-field form-field-full">
+            <label for="field-notes" class="field-label">Notes</label>
+            <textarea
+              id="field-notes"
+              name="notes"
+              class="field-textarea"
+              rows="4"
+              placeholder="Recruiter contact, salary range, interview questions, or next follow-up..."
+              maxlength="2000"
+            ></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              id="modal-delete-btn"
+              class="btn btn-danger-ghost"
+              hidden
+            >
+              Delete
+            </button>
+            <div class="modal-footer-right">
+              <button type="button" id="modal-cancel-btn" class="btn btn-secondary">
+                Cancel
+              </button>
+              <button type="submit" id="modal-submit-btn" class="btn btn-primary">
+                Save application
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div
+      id="delete-modal"
+      class="modal-backdrop"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+      aria-describedby="delete-modal-desc"
+      hidden
+    >
+      <div class="modal-panel modal-panel-sm">
+        <div class="modal-header">
+          <h2 id="delete-modal-title" class="modal-title">Delete application</h2>
+          <button
+            type="button"
+            id="delete-close-btn"
+            class="icon-btn"
+            aria-label="Close confirmation dialog"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <p id="delete-modal-desc" class="delete-copy">
+          Are you sure you want to remove this application?
+        </p>
+
+        <div class="modal-footer modal-footer-end">
+          <button type="button" id="delete-cancel-btn" class="btn btn-secondary">
+            Cancel
+          </button>
+          <button type="button" id="delete-confirm-btn" class="btn btn-danger">
+            Delete application
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Non-blocking Toast Region -->
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

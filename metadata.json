@@ -1,0 +1,6 @@
+{
+  "name": "Rolebook",
+  "description": "Single-page job application tracker with pipeline dashboard, status bar chart, search, and localStorage persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
